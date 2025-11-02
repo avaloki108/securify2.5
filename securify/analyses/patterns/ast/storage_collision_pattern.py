@@ -1,0 +1,49 @@
+from typing import List
+
+from securify.analyses.patterns.abstract_pattern import Severity, PatternMatch, MatchComment
+from securify.analyses.patterns.ast.abstract_ast_pattern import AbstractAstPattern
+from securify.analyses.patterns.ast.declaration_utils import DeclarationUtils
+from securify.solidity.v_0_5_x.solidity_grammar_core import ContractDefinition, InheritanceSpecifier, StateVariableDeclaration
+
+
+class StorageCollisionPattern(DeclarationUtils, AbstractAstPattern):
+    name = "Storage Collision Risk"
+
+    description = "In contracts using inheritance or proxy patterns, storage layout collisions can occur. Ensure proper storage gap or layout planning in upgradeable contracts."
+
+    severity = Severity.HIGH
+    tags = {"solidity_version": "0.8.0+", "category": "storage", "upgradeable": "true"}
+
+    def find_matches(self) -> List[PatternMatch]:
+        ast_root = self.get_ast_root()
+        contracts = ast_root.find_descendants_of_type(ContractDefinition)
+        
+        for contract in contracts:
+            # Check if contract uses inheritance
+            inheritance_list = []
+            try:
+                if hasattr(contract, 'baseContracts') and contract.baseContracts:
+                    inheritance_list = contract.baseContracts
+            except AttributeError:
+                continue
+            
+            # If contract uses inheritance, check for storage variables
+            if len(inheritance_list) > 0:
+                state_vars = contract.find_descendants_of_type(StateVariableDeclaration)
+                
+                # Look for contracts with both inheritance and state variables
+                # This could indicate a storage collision risk, especially in proxy patterns
+                if len(list(state_vars)) > 0:
+                    # Check if there's a storage gap pattern (common in upgradeable contracts)
+                    has_gap = False
+                    for var in state_vars:
+                        if hasattr(var, 'name') and '__gap' in str(var.name).lower():
+                            has_gap = True
+                            break
+                    
+                    # If no storage gap found in a contract with inheritance, flag it as a warning
+                    if not has_gap and len(inheritance_list) > 1:
+                        yield self.match_warning().with_info(
+                            MatchComment(f"Contract {contract.name} uses multiple inheritance without storage gap - potential storage collision in upgradeable contracts"),
+                            *self.ast_node_info(contract)
+                        )
