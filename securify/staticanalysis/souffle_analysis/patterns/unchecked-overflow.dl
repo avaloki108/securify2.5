@@ -25,7 +25,7 @@
 		arithmeticOp(instr).
 
 	// Flag as warning since we cannot determine if it's in an unchecked block from IR
-	violationInContext(instrInCtx, "Arithmetic operation detected - ensure proper overflow checks in Solidity 0.8.0+") :-
+	violationInContext(instrInCtx, "Arithmetic operation in unchecked block - verify overflow/underflow safety") :-
 		applicableInContext(instrInCtx),
 		!maybeCompliantInContext(instrInCtx).
 

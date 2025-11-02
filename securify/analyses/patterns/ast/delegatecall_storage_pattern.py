@@ -38,5 +38,6 @@ class DelegatecallStoragePattern(DeclarationUtils, AbstractAstPattern):
                             MatchComment("Delegatecall detected - ensure storage layout compatibility and validate target address"),
                             *self.ast_node_info(call)
                         )
-            except (AttributeError, TypeError):
+            except AttributeError:
+                # Expected when node doesn't have required attributes
                 continue

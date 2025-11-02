@@ -20,7 +20,7 @@ class UncheckedArithmeticPattern(DeclarationUtils, AbstractAstPattern):
         source_code = self.analysis_context.source_code
         
         if not source_code:
-            return
+            return []
         
         # Search for unchecked blocks in the source code
         pattern = re.compile(r'\bunchecked\s*\{', re.MULTILINE)
