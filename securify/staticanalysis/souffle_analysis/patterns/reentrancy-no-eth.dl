@@ -7,6 +7,9 @@
 
     SEVERITY(MEDIUM)
 
+    TAG("owasp-sc", "SC05")
+    TAG("owasp-name", "Reentrancy Attacks")
+
     applicableInContext(callCtx) :-
         externalCall(call),
         callValue(call, value),

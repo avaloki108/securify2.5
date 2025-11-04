@@ -10,6 +10,8 @@
 
 	SEVERITY(HIGH)
 	
+	TAG("owasp-sc", "SC08")
+	TAG("owasp-name", "Integer Overflow and Underflow")
 	TAG("solidity_version", "0.8.0+")
 	TAG("category", "arithmetic")
 

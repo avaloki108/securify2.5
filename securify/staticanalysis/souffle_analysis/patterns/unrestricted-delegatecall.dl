@@ -9,6 +9,9 @@
 
 	SEVERITY(HIGH)
 
+	TAG("owasp-sc", "SC01")
+	TAG("owasp-name", "Access Control Vulnerabilities")
+
 	applicableInContext(callInContext) :-
 		ctxProvider.elementInContext(callInContext, call, _),
 		externalCall(call), isDelegateCall(call).

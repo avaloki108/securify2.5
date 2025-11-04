@@ -7,6 +7,9 @@
 
     SEVERITY(HIGH)
 
+    TAG("owasp-sc", "SC06")
+    TAG("owasp-name", "Unchecked External Calls")
+
 
     applicableInContext(callInContext) :- checkableCall(call),
 		ctxProvider.elementInContext(callInContext, call, _).

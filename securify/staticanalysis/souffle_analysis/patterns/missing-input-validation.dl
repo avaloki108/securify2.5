@@ -7,6 +7,9 @@
 
     SEVERITY(MEDIUM)
 
+    TAG("owasp-sc", "SC04")
+    TAG("owasp-name", "Lack of Input Validation")
+
     applicable(function, line) :-
         externallyCallable(function), sourceLine(function, line).
     //        applicableArgument([arg, _]), //, mayBeUsedFor([arg, _], _, _),

@@ -8,6 +8,9 @@
 
     SEVERITY(LOW)
 
+    TAG("owasp-sc", "SC05")
+    TAG("owasp-name", "Reentrancy Attacks")
+
     .init reentrancyNoEth = ReentrancyNoETHPattern
     // There are two cases here:
     // 1) A reentrancy is benign if after the call there is a store in variable on which the call does not depend on
