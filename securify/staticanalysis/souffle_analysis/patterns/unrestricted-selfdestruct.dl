@@ -7,6 +7,9 @@
 
     SEVERITY(CRITICAL)
 
+    TAG("owasp-sc", "SC01")
+    TAG("owasp-name", "Access Control Vulnerabilities")
+
 
 	applicableInContext(callInContext) :-
         selfdestruct(call, _),

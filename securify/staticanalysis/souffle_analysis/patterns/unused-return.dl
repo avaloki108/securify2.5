@@ -5,6 +5,9 @@
 
     SEVERITY(MEDIUM)
 
+    TAG("owasp-sc", "SC06")
+    TAG("owasp-name", "Unchecked External Calls")
+
     // We may need to account for tuples of returns
     // We need to account for external calls only
     applicable(argument, argumentLine) :-

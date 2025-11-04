@@ -1,0 +1,96 @@
+#include "abstract-context-pattern.dl"
+
+// SC02: Price Oracle Manipulation
+// Detects potential price oracle manipulation vulnerabilities
+.comp PriceOracleManipulationPattern : PerContextPattern {
+    NAME("Price Oracle Manipulation")
+
+    DESCRIPTION(STR_JOIN(
+        "Price oracle calls without proper validation can be manipulated. ",
+        "Always use time-weighted average prices (TWAP), multiple oracle sources, ",
+        "or decentralized oracles like Chainlink to prevent price manipulation attacks."))
+
+    SEVERITY(CRITICAL)
+
+    // Oracle-related function calls that might be vulnerable
+    applicableInContext(callCtx) :-
+        ctxProvider.elementInContext(callCtx, call, _),
+        (
+            // Common oracle-related function patterns
+            callInfo(call, _, "getPrice");
+            callInfo(call, _, "price");
+            callInfo(call, _, "latestAnswer");
+            callInfo(call, _, "latestRoundData");
+            callInfo(call, _, "getReserves");
+            callInfo(call, _, "getAmountOut");
+            callInfo(call, _, "getAmountsOut");
+            callInfo(call, _, "quote")
+        ).
+
+    // Compliant if the oracle value is validated or uses TWAP
+    compliantInContext(callCtx, "") :-
+        applicableInContext(callCtx),
+        (
+            // Check if result is compared or validated
+            hasValidation(callCtx);
+            // Check if multiple oracle sources are used
+            hasMultipleOracleSources(callCtx);
+            // Check if TWAP is used
+            usesTWAP(callCtx)
+        ).
+
+    violationInContext(callCtx, STR_JOIN("Potential oracle manipulation at: ", callStr)) :-
+        applicableInContext(callCtx),
+        !compliantInContext(callCtx, _),
+        ctxProvider.elementInContext(callCtx, call, _),
+        callStr = to_string(call).
+
+    // Check if oracle result is validated before use
+    .decl hasValidation(callCtx: ctxProvider.ElementInContext)
+    hasValidation(callCtx) :-
+        applicableInContext(callCtx),
+        ctxProvider.elementInContext(callCtx, call, _),
+        // Result is used in a comparison/branching condition
+        dataflow.mayDependOn(conditionCtx, callCtx),
+        ctxProvider.elementInContext(conditionCtx, condition, _),
+        branchingCondition(condition, _).
+
+    // Check if multiple oracle sources are consulted
+    .decl hasMultipleOracleSources(callCtx: ctxProvider.ElementInContext)
+    hasMultipleOracleSources(callCtx) :-
+        applicableInContext(callCtx),
+        ctxProvider.elementInContext(callCtx, call1, context),
+        ctxProvider.elementInContext(call2Ctx, call2, context),
+        call1 != call2,
+        // Both calls are oracle-related
+        (callInfo(call2, _, "getPrice"); callInfo(call2, _, "latestAnswer"); callInfo(call2, _, "latestRoundData")),
+        // Both are used in same function
+        isInFunction(call1, func),
+        isInFunction(call2, func).
+
+    // Check if TWAP (Time-Weighted Average Price) patterns are used
+    .decl usesTWAP(callCtx: ctxProvider.ElementInContext)
+    usesTWAP(callCtx) :-
+        applicableInContext(callCtx),
+        ctxProvider.elementInContext(callCtx, call, context),
+        // Look for time-based averaging patterns
+        isInFunction(call, func),
+        annotation(func, "name", name),
+        (
+            // Function name contains TWAP-related keywords (case-insensitive patterns)
+            contains("twap", name); 
+            contains("TWAP", name); 
+            contains("timeWeighted", name);
+            contains("time_weighted", name);
+            contains("time-weighted", name);
+            contains("TimeWeighted", name);
+            contains("average", name), contains("time", name)
+        ).
+
+    .decl branchingCondition(condition: SSA, branchBlock: Block)
+    branchingCondition(condition, branchBlock) :- 
+        branch(_, _, branchBlock, _, _, condition).
+
+    TAG("owasp-sc", "SC02")
+    TAG("owasp-name", "Price Oracle Manipulation")
+}

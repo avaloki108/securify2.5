@@ -1,0 +1,143 @@
+#include "abstract-context-pattern.dl"
+
+// SC07: Flash Loan Attacks
+// Detects potential flash loan attack vulnerabilities
+.comp FlashLoanAttacksPattern : PerContextPattern {
+    NAME("Flash Loan Attack Vulnerability")
+
+    DESCRIPTION(STR_JOIN(
+        "Flash loans allow borrowing large amounts without collateral in a single transaction. ",
+        "Contracts must not rely on spot prices, balance checks, or unprotected state changes ",
+        "that can be manipulated within a single transaction. Use commit-reveal schemes, ",
+        "reentrancy guards, and validate all state changes."))
+
+    SEVERITY(CRITICAL)
+
+    // Functions that handle large value transfers or critical state changes
+    applicableInContext(funcCtx) :-
+        ctxProvider.elementInContext(funcCtx, func, _),
+        function(func, _),
+        (
+            // Public or external functions
+            annotation(func, "visibility", "public");
+            annotation(func, "visibility", "external")
+        ),
+        (
+            // Functions that handle value transfers
+            hasEtherTransfer(func);
+            // Functions that update critical state (balances, prices, etc.)
+            hasCriticalStateUpdate(func);
+            // Functions with balance checks
+            hasBalanceCheck(func)
+        ).
+
+    // Compliant if proper protections are in place
+    compliantInContext(funcCtx, "") :-
+        applicableInContext(funcCtx),
+        ctxProvider.elementInContext(funcCtx, func, _),
+        (
+            // Has reentrancy guard
+            hasReentrancyGuard(func);
+            // Uses commit-reveal pattern
+            usesCommitReveal(func);
+            // Has proper state validation
+            hasProperStateValidation(func)
+        ).
+
+    violationInContext(funcCtx, STR_JOIN("Potential flash loan vulnerability in function: ", funcName)) :-
+        applicableInContext(funcCtx),
+        !compliantInContext(funcCtx, _),
+        ctxProvider.elementInContext(funcCtx, func, _),
+        annotation(func, "name", funcName).
+
+    // Check if function has ether transfers
+    .decl hasEtherTransfer(func: Function)
+    hasEtherTransfer(func) :-
+        function(func, _),
+        isInFunction(transfer, func),
+        (
+            callInfo(transfer, _, "transfer");
+            callInfo(transfer, _, "send");
+            callInfo(transfer, _, "call")
+        ),
+        callValue(transfer, value),
+        ctxProvider.elementInContext(valueCtx, value, _),
+        !(valueKnown(valueCtx), valueOf(valueCtx, "0")).
+
+    // Check if function updates critical state variables
+    .decl hasCriticalStateUpdate(func: Function)
+    hasCriticalStateUpdate(func) :-
+        function(func, _),
+        isInFunction(store, func),
+        (
+            stateVariable(var, _, _),
+            store(store, var, _);
+            structStore(store, _, _, _);
+            mapStore(store, _, _, _)
+        ).
+
+    // Check if function performs balance checks
+    .decl hasBalanceCheck(func: Function)
+    hasBalanceCheck(func) :-
+        function(func, _),
+        isInFunction(balance, func),
+        builtinVariable(balance, "balance").
+
+    // Check for reentrancy guard pattern
+    .decl hasReentrancyGuard(func: Function)
+    hasReentrancyGuard(func) :-
+        function(func, _),
+        // Look for state variable that acts as a guard
+        isInFunction(load1, func),
+        isInFunction(store1, func),
+        isInFunction(store2, func),
+        stateVariable(guard, _, _),
+        load(load1, guard),
+        store(store1, guard, _),
+        store(store2, guard, _),
+        // Guard is checked in a condition
+        dataflow.mayDependOn(condCtx, load1Ctx),
+        ctxProvider.elementInContext(condCtx, cond, _),
+        ctxProvider.elementInContext(load1Ctx, load1, _),
+        branchingCondition(cond, _).
+
+    // Check for commit-reveal pattern
+    .decl usesCommitReveal(func: Function)
+    usesCommitReveal(func) :-
+        function(func, _),
+        annotation(func, "name", name),
+        (
+            contains("commit", name);
+            contains("reveal", name);
+            contains("Commit", name);
+            contains("Reveal", name)
+        ).
+
+    // Check for proper state validation
+    .decl hasProperStateValidation(func: Function)
+    hasProperStateValidation(func) :-
+        function(func, _),
+        // Function checks state before and after critical operations
+        isInFunction(load1, func),
+        isInFunction(load2, func),
+        load1 != load2,
+        stateVariable(var, _, _),
+        load(load1, var),
+        load(load2, var),
+        // Both loads are used in conditions
+        dataflow.mayDependOn(cond1Ctx, load1Ctx),
+        dataflow.mayDependOn(cond2Ctx, load2Ctx),
+        ctxProvider.elementInContext(cond1Ctx, cond1, _),
+        ctxProvider.elementInContext(cond2Ctx, cond2, _),
+        ctxProvider.elementInContext(load1Ctx, load1, _),
+        ctxProvider.elementInContext(load2Ctx, load2, _),
+        branchingCondition(cond1, _),
+        branchingCondition(cond2, _).
+
+    .decl branchingCondition(condition: SSA, branchBlock: Block)
+    branchingCondition(condition, branchBlock) :- 
+        branch(_, _, branchBlock, _, _, condition).
+
+    TAG("owasp-sc", "SC07")
+    TAG("owasp-name", "Flash Loan Attacks")
+}

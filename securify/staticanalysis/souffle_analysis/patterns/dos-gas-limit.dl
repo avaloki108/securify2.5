@@ -7,6 +7,9 @@
 
 	SEVERITY(MEDIUM)
 
+	TAG("owasp-sc", "SC10")
+	TAG("owasp-name", "Denial of Service (DoS) Attacks")
+
 	applicable(ssa, ssaLine) :-
     	increasedStorageInPublicFunction(ssa),
 		sourceLine(ssa, ssaLine).

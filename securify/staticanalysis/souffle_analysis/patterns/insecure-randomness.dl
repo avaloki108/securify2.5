@@ -1,0 +1,168 @@
+#include "abstract-context-pattern.dl"
+
+// SC09: Insecure Randomness
+// Detects use of insecure randomness sources
+.comp InsecureRandomnessPattern : PerContextPattern {
+    NAME("Insecure Randomness")
+
+    DESCRIPTION(STR_JOIN(
+        "Using block properties (timestamp, blockhash, difficulty) or predictable values ",
+        "for randomness is insecure and can be manipulated by miners. ",
+        "Use Chainlink VRF or similar secure randomness solutions for critical operations."))
+
+    SEVERITY(HIGH)
+
+    // Detects use of insecure randomness sources
+    applicableInContext(randomSourceCtx) :-
+        ctxProvider.elementInContext(randomSourceCtx, randomSource, _),
+        (
+            // Block timestamp
+            existsBlockTimestamp(randomSource);
+            // Block difficulty/prevrandao
+            existsBlockDifficulty(randomSource);
+            // Block number
+            existsBlockNumber(randomSource);
+            // Block hash
+            existsBlockHash(randomSource);
+            // tx.origin
+            existsTxOrigin(randomSource);
+            // msg.sender (when used for randomness)
+            existsMsgSender(randomSource)
+        ).
+
+    // Compliant if used in non-critical context (e.g., just logging)
+    compliantInContext(randomSourceCtx, "") :-
+        applicableInContext(randomSourceCtx),
+        !usedInCriticalOperation(randomSourceCtx).
+
+    // Violation if used in critical operations
+    violationInContext(randomSourceCtx, STR_JOIN("Insecure randomness source used for critical operation at line: ", line)) :-
+        applicableInContext(randomSourceCtx),
+        usedInCriticalOperation(randomSourceCtx),
+        ctxProvider.elementInContext(randomSourceCtx, randomSource, _),
+        sourceLine(randomSource, line).
+
+    // Check if randomness is used in critical operations
+    .decl usedInCriticalOperation(randomSourceCtx: ctxProvider.ElementInContext)
+    usedInCriticalOperation(randomSourceCtx) :-
+        applicableInContext(randomSourceCtx),
+        (
+            // Used to determine ether transfers
+            usedForEtherTransfer(randomSourceCtx);
+            // Used to modify critical state
+            usedForStateModification(randomSourceCtx);
+            // Used in winner selection
+            usedForWinnerSelection(randomSourceCtx);
+            // Used in token distribution
+            usedForTokenDistribution(randomSourceCtx)
+        ).
+
+    // Check if used for ether transfer decisions
+    .decl usedForEtherTransfer(randomSourceCtx: ctxProvider.ElementInContext)
+    usedForEtherTransfer(randomSourceCtx) :-
+        applicableInContext(randomSourceCtx),
+        dataflow.mayDependOn(transferCtx, randomSourceCtx),
+        ctxProvider.elementInContext(transferCtx, transfer, _),
+        (
+            callInfo(transfer, _, "transfer");
+            callInfo(transfer, _, "send");
+            callValue(transfer, value),
+            dataflow.mayDependOn(valueCtx, randomSourceCtx),
+            ctxProvider.elementInContext(valueCtx, value, _)
+        ).
+
+    // Check if used for state modifications
+    .decl usedForStateModification(randomSourceCtx: ctxProvider.ElementInContext)
+    usedForStateModification(randomSourceCtx) :-
+        applicableInContext(randomSourceCtx),
+        dataflow.mayDependOn(storeCtx, randomSourceCtx),
+        ctxProvider.elementInContext(storeCtx, store, _),
+        (
+            store(store, _, _);
+            mapStore(store, _, _, _);
+            structStore(store, _, _, _)
+        ).
+
+    // Check if used for winner selection (common in lotteries/games)
+    .decl usedForWinnerSelection(randomSourceCtx: ctxProvider.ElementInContext)
+    usedForWinnerSelection(randomSourceCtx) :-
+        applicableInContext(randomSourceCtx),
+        dataflow.mayDependOn(funcCtx, randomSourceCtx),
+        ctxProvider.elementInContext(funcCtx, func, _),
+        function(func, _),
+        annotation(func, "name", name),
+        (
+            contains("winner", name);
+            contains("Winner", name);
+            contains("lottery", name);
+            contains("Lottery", name);
+            contains("random", name);
+            contains("Random", name);
+            contains("draw", name);
+            contains("Draw", name)
+        ).
+
+    // Check if used for token distribution
+    .decl usedForTokenDistribution(randomSourceCtx: ctxProvider.ElementInContext)
+    usedForTokenDistribution(randomSourceCtx) :-
+        applicableInContext(randomSourceCtx),
+        dataflow.mayDependOn(callCtx, randomSourceCtx),
+        ctxProvider.elementInContext(callCtx, call, _),
+        (
+            callInfo(call, _, "mint");
+            callInfo(call, _, "burn");
+            callInfo(call, _, "transfer");
+            callInfo(call, _, "transferFrom")
+        ).
+
+    // Block timestamp detection
+    .decl existsBlockTimestamp(randomSource: Element)
+    existsBlockTimestamp(timestampSSA) :-
+        builtinVariable(blockSSA, "block"),
+        builtinVariable(timestampSSA, "TIMESTAMP"),
+        follows(timestampSSA, blockSSA).
+
+    // Block difficulty/prevrandao detection
+    .decl existsBlockDifficulty(randomSource: Element)
+    existsBlockDifficulty(difficultySSA) :-
+        builtinVariable(blockSSA, "block"),
+        (
+            builtinVariable(difficultySSA, "DIFFICULTY");
+            builtinVariable(difficultySSA, "PREVRANDAO")
+        ),
+        follows(difficultySSA, blockSSA).
+
+    // Block number detection
+    .decl existsBlockNumber(randomSource: Element)
+    existsBlockNumber(numberSSA) :-
+        builtinVariable(blockSSA, "block"),
+        builtinVariable(numberSSA, "NUMBER"),
+        follows(numberSSA, blockSSA).
+
+    // Block hash detection
+    .decl existsBlockHash(randomSource: Element)
+    existsBlockHash(hashSSA) :-
+        callInfo(hashSSA, _, "blockhash").
+
+    // tx.origin detection
+    .decl existsTxOrigin(randomSource: Element)
+    existsTxOrigin(originSSA) :-
+        txOrigin(originSSA).
+
+    // msg.sender detection (when used as randomness source)
+    .decl existsMsgSender(randomSource: Element)
+    existsMsgSender(senderSSA) :-
+        msgSender(senderSSA),
+        // Only flag if used in modulo or hash operation (typical randomness pattern)
+        (
+            bop(_, senderSSA, _, "%");
+            bop(_, _, senderSSA, "%");
+            callInfo(hash, _, "keccak256"),
+            dataflow.mayDependOn(hashCtx, senderCtx),
+            ctxProvider.elementInContext(senderCtx, senderSSA, _),
+            ctxProvider.elementInContext(hashCtx, hash, _)
+        ).
+
+    TAG("owasp-sc", "SC09")
+    TAG("owasp-name", "Insecure Randomness")
+}
