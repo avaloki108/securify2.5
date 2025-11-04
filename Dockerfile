@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 ARG SOLC=0.5.12
 
 # install basic packages
@@ -25,7 +25,7 @@ RUN wget https://github.com/souffle-lang/souffle/releases/download/1.6.2/souffle
 # install graphviz and pip
 RUN apt-get update && apt-get -y install\
         graphviz \
-        python3 \
+        python3.13 \
         python3-pip \
 	curl
 
