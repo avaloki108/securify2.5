@@ -21,10 +21,10 @@ class DatalogType:
             return ""
 
         if self.type == "number":
-            declaration = f".number_type {self.name}"
+            declaration = f".type {self.name} = number"
 
         if self.type == "symbol":
-            declaration = f".symbol_type {self.name}"
+            declaration = f".type {self.name} = symbol"
 
         if isinstance(self.type, tuple):
             declaration = f".type {self.name} = {' | '.join([t.name for t in self.type])}"

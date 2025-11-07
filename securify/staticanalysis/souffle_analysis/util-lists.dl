@@ -36,7 +36,7 @@
 	#ifdef UNIT_TEST
 		#include "util-macros.dl"
 
-		.symbol_type TestElem
+		.type TestElem = symbol
 		.type TestList = [s: TestElem, l: TestList]
 
 		.init q = ListOps<TestElem, TestList>
@@ -51,4 +51,3 @@
 	#endif
 
 #endif
-

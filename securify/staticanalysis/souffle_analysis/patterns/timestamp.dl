@@ -49,7 +49,7 @@
         ctxProvider.elementInContext(ssaCtx, ssa, _).
 
     //Find a block.timestamp command
-    .decl existsBlockTimestamp(blockTimestamp: Element, blockTimestampLine: Element)
+    .decl existsBlockTimestamp(blockTimestamp: Element, blockTimestampLine: symbol)
     existsBlockTimestamp(timestampSSA, blockTimestampLine):-
         builtinVariable(blockSSA, "block"),
         builtinVariable(timestampSSA, "TIMESTAMP"),

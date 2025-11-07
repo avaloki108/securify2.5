@@ -51,6 +51,11 @@ def run_souffle(source_file, *, facts=None, fact_dir=None, output_dir=None, exec
         fact_dir = get_dir(fact_dir)
         output_dir = get_dir(output_dir)
 
+        souffle_params = dict(souffle_kwargs or {})
+
+        if executable_dir is None and not souffle_params.get('use_interpreter'):
+            souffle_params['use_interpreter'] = True
+
         if facts:
             generate_fact_files(facts, fact_dir)
 
@@ -59,7 +64,7 @@ def run_souffle(source_file, *, facts=None, fact_dir=None, output_dir=None, exec
             fact_dir=fact_dir,
             output_dir=output_dir,
             dl_executable=executable_dir,
-            **(souffle_kwargs or {}))
+            **souffle_params)
 
         output_facts = read_outputs(output_dir)
 

@@ -1,12 +1,12 @@
 #define ENABLE_INPUT_FROM_FILES
 
-.number_type ArgIndex    // Index used to qualify block arguments
-.symbol_type StateVar    // Identifier for state variables
-.symbol_type Transfer    // ID of a transfer between blocks
-.symbol_type Name        // Name associated to an object
-.symbol_type SSA         // ID of a statement or block argument and its value
-.symbol_type Block       // ID of a basic block
-.symbol_type Contract    // ID of a contract
+.type ArgIndex = number    // Index used to qualify block arguments
+.type StateVar = symbol    // Identifier for state variables
+.type Transfer = symbol    // ID of a transfer between blocks
+.type Name = symbol        // Name associated to an object
+.type SSA = symbol         // ID of a statement or block argument and its value
+.type Block = symbol       // ID of a basic block
+.type Contract = symbol    // ID of a contract
 
 .type Function = Block   // Type alias for referring to function blocks
 .type Element = Contract | SSA | Block | Transfer | StateVar // Any Program Element

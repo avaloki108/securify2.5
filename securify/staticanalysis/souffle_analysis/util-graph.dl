@@ -121,7 +121,7 @@
 		// graph.edge(2, 5).
 		// graph.edge(6, 2).
 
-		.number_type Node
+		.type Node = number
 		.init graph = DiGraphOps<Node>
 
 		graph.edge(-5, -6).
@@ -164,4 +164,3 @@
 		.output graph.linearlyConnected
 	#endif
 #endif
-

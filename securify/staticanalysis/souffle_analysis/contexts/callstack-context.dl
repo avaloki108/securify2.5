@@ -1,6 +1,6 @@
 #include "../util-lists.dl"
 
-.symbol_type CallStackTag
+.type CallStackTag = symbol
 .type TransferStack = [head: Transfer, tail: TransferStack]
 .type CallStack = [function: Function, transfer: TransferStack, tag: CallStackTag]
 

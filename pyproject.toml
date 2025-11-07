@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "securify"
+version = "0.0.1"
+description = "Securify v2.0 - Security scanner for Ethereum smart contracts"
+requires-python = ">=3.12"
+readme = "README.md"
+dependencies = [
+    "py-solc",
+    "semantic_version",
+    "graphviz",
+    "py-etherscan-api",
+    "requests"
+]
+
+[project.scripts]
+securify = "securify.__main__:main"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"securify" = [
+    "staticanalysis/souffle_analysis/*.dl",
+    "staticanalysis/souffle_analysis/patterns/*.dl",
+    "staticanalysis/souffle_analysis/contexts/*.dl",
+    "staticanalysis/souffle_analysis/semantics/*.dl",
+    "staticanalysis/libfunctors/*.cpp",
+    "staticanalysis/libfunctors/*.dl",
+    "staticanalysis/libfunctors/*.sh",
+    "staticanalysis/libfunctors/README.txt",
+    "staticanalysis/facts_in/.keep",
+    "staticanalysis/facts_out/.keep",
+]

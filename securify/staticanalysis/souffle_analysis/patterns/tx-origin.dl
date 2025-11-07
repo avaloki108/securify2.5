@@ -35,9 +35,10 @@
 
     .decl callInfo(call: Transfer, matchInfo: symbol, matchComment: symbol)
     callInfo(call, matchInfo, matchComment) :-
-        sourceLine(call, sourceLine),
+        call(call, _, _, _),
+        sourceLine(call, sourceLineVal),
         matchInfo = STR_JOIN("CALL: ", call),
-        matchComment = STR_JOIN("LINE: ", sourceLine).
+        matchComment = STR_JOIN("LINE: ", sourceLineVal).
 
 }
 .output msgSender

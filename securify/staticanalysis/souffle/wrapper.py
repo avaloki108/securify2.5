@@ -43,12 +43,22 @@ def souffle_wrapper(souffle_binary=None,
         souffle_binary = get_souffle_binary_path()
 
     command = [souffle_binary]
+    binary_flags: List[str] = []
 
-    def add_option(param_value, param_name):
+    def add_option(param_value, param_name, binary_flag=None):
         if param_value is not None:
             command.append(param_name)
+            if binary_flag and not use_interpreter:
+                binary_flags.append(binary_flag)
 
-    def add_param(param_value, param_name, transformer=None, no_args=False):
+    def register_binary_flag(flag, value):
+        if use_interpreter or flag is None or value is None:
+            return
+
+        if flag in ('-F', '-D', '-j'):
+            binary_flags.extend([flag, str(value)])
+
+    def add_param(param_value, param_name, transformer=None, no_args=False, binary_flag=None):
         if param_value is not None:
             if transformer:
                 param_value = transformer(param_value)
@@ -58,17 +68,19 @@ def souffle_wrapper(souffle_binary=None,
             else:
                 command.append(f'{param_name}')
 
+            register_binary_flag(binary_flag, param_value if not no_args else None)
+
     add_option(help, '--help')
     add_option(version, '--version')
     add_option(verbose, '--verbose')
 
-    add_param(fact_dir, '--fact-dir', get_path)
+    add_param(fact_dir, '--fact-dir', get_path, binary_flag='-F')
     add_param(include_dir, '--include-dir', get_path)
-    add_param(output_dir, '--output-dir', get_path)
+    add_param(output_dir, '--output-dir', get_path, binary_flag='-D')
     add_param(library_dir, '--library-dir', get_path)
     add_param(libraries, '--libraries', get_path)
 
-    add_param(jobs, '--jobs')
+    add_param(jobs, '--jobs', binary_flag='-j')
     add_param(profile_out, '--profile')
     add_param(profile_use, '--profile-use')
     add_param(report_out, '--debug-report')
@@ -77,8 +89,12 @@ def souffle_wrapper(souffle_binary=None,
     # Turn it off for now
     #use_interpreter=True
 
+    executable_path = get_path(dl_executable) if dl_executable is not None else None
+
     if not use_interpreter:
-        add_param(dl_executable, '--dl-program')
+        if executable_path is None:
+            raise ValueError("dl_executable must be provided when not using the interpreter.")
+        add_param(executable_path, '--dl-program')
 
     if macro_definitions:
         macro_mappings = (f"{k}={v}" for k, v in macro_definitions.items())
@@ -92,58 +108,74 @@ def souffle_wrapper(souffle_binary=None,
     #     stdin = force_bytes(stdin, 'utf8')
 
     # Use souffle command (either for the interpreter or for compilation
-    if not os.path.exists(dl_executable)\
-       or force_recompilation\
-       or use_interpreter:
+    if use_interpreter:
+        proc = subprocess.Popen(command,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE)
 
+        stdoutdata, stderrdata = proc.communicate(stdin)
+
+        if proc.returncode != success_return_code:
+            raise SouffleError(
+                command=command,
+                return_code=proc.returncode,
+                stdin_data=stdin,
+                stdout_data=codecs.decode(stdoutdata),
+                stderr_data=codecs.decode(stderrdata),
+            )
+
+        return SouffleOutput(codecs.decode(stdoutdata),
+                             codecs.decode(stderrdata),
+                             command,
+                             proc)
+
+    needs_compilation = force_recompilation or not os.path.exists(executable_path)
+
+    if needs_compilation:
         compilation_msg = 'Compiling it now. This might take some time...'
         if force_recompilation:
             print("Forcing recompilation.", compilation_msg)
-        elif not os.path.exists(dl_executable) and not use_interpreter:
+        else:
             print("Executable not found.", compilation_msg)
 
-        #print(command)
-        proc = subprocess.Popen(command,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+        proc_compile = subprocess.Popen(command,
+                                        stdin=subprocess.PIPE,
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
 
-        stdoutdata, stderrdata = proc.communicate(stdin)
+        stdout_compile, stderr_compile = proc_compile.communicate(stdin)
 
-        if proc.returncode != success_return_code:
+        if proc_compile.returncode != success_return_code:
             raise SouffleError(
                 command=command,
-                return_code=proc.returncode,
+                return_code=proc_compile.returncode,
                 stdin_data=stdin,
-                stdout_data=codecs.decode(stdoutdata),
-                stderr_data=codecs.decode(stderrdata),
+                stdout_data=codecs.decode(stdout_compile),
+                stderr_data=codecs.decode(stderr_compile),
             )
 
-    # Use compiled executable
-    if not use_interpreter:
+    binary_command = [os.path.abspath(executable_path), *binary_flags]
 
-        command = os.path.abspath(dl_executable)
+    proc = subprocess.Popen(binary_command,
+                            stdin=subprocess.PIPE,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
 
-        #print(command)
-        proc = subprocess.Popen(command,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.PIPE)
+    stdoutdata, stderrdata = proc.communicate(stdin)
 
-        stdoutdata, stderrdata = proc.communicate(stdin)
-
-        if proc.returncode != success_return_code:
-            raise SouffleError(
-                command=command,
-                return_code=proc.returncode,
-                stdin_data=stdin,
-                stdout_data=codecs.decode(stdoutdata),
-                stderr_data=codecs.decode(stderrdata),
-            )
+    if proc.returncode != success_return_code:
+        raise SouffleError(
+            command=binary_command,
+            return_code=proc.returncode,
+            stdin_data=stdin,
+            stdout_data=codecs.decode(stdoutdata),
+            stderr_data=codecs.decode(stderrdata),
+        )
 
     return SouffleOutput(codecs.decode(stdoutdata),
                          codecs.decode(stderrdata),
-                         command,
+                         binary_command,
                          proc)
 
 

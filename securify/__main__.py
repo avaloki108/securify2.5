@@ -180,9 +180,16 @@ def prepare_env(binary=None):
         os.system("cd " + base_path.absolute().as_posix() + " && " + compile_script + "&& cd - > /dev/null")
 
     def check_LD_LIBRARY_PATH():
-        if 'LD_LIBRARY_PATH' in os.environ: return
-        print("Environment variable LD_LIBRARY_PATH not set. Setting it up...")
-        os.environ['LD_LIBRARY_PATH'] = base_path.absolute().as_posix()
+        base = base_path.absolute().as_posix()
+        current = os.environ.get('LD_LIBRARY_PATH', '')
+        if current:
+            if base in current.split(':'):
+                return
+            print("Adding libfunctors to LD_LIBRARY_PATH...")
+            os.environ['LD_LIBRARY_PATH'] = current + ':' + base
+        else:
+            print("Environment variable LD_LIBRARY_PATH not set. Setting it up...")
+            os.environ['LD_LIBRARY_PATH'] = base
 
     def define_SOLC_BINARY(binary=None):
         if binary is None: return

@@ -1,7 +1,7 @@
 #include "util-sets.dl"
 #include "../souffle_analysis/util-graph.dl"
 
-.number_type Vertex
+.type Vertex = number
 
 .init g = DiGraph<Vertex>
 

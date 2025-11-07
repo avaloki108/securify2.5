@@ -41,62 +41,70 @@ Install
 ===
 
 ## Prerequisites
-The following instructions assume that a Python is already installed. In addition to that, Securify requires `solc`, `souffle` and `graphviz` to be installed on the system:
+The following instructions assume that Python ≥ 3.12 is already installed. In addition to that, Securify requires `solc`, `souffle` (2.5 or newer) and `graphviz` to be available on the system.
 
-### [Solc](https://solidity.readthedocs.io/en/v0.5.10/installing-solidity.html) 
+### [Solc](https://solidity.readthedocs.io/en/v0.5.10/installing-solidity.html)
 ```
 sudo add-apt-repository ppa:ethereum/ethereum
 sudo apt-get update
 sudo apt-get install solc
 ```
 
-### [Souffle](https://souffle-lang.github.io/install) 
+### Souffle 2.5
 
-Follow the instructions here: https://souffle-lang.github.io/download.html
+Souffle 2.5 introduces tighter type-checking which this repository now fully supports. On Ubuntu 24.04 you can install the official binary release via:
+```
+sudo apt-get update && sudo apt-get install -y wget
+wget https://github.com/souffle-lang/souffle/releases/download/2.5/x86_64-ubuntu-2404-souffle-2.5-Linux.deb -O /tmp/souffle.deb
+sudo apt install /tmp/souffle.deb
+souffle --version   # should report 2.5
+```
 
-*Please do not opt for the unstable version since it might break at any point.*
+For other platforms follow the upstream instructions: https://souffle-lang.github.io/download.html
 
 ### [Graphviz / Dot](https://www.graphviz.org/download/)
 ```
 sudo apt install graphviz
 ```
 
-## Setting up the virtual environment
+## Installing Securify
 
-After the prerequisites have been installed, we can set up the python virtual environment from which we will run the scripts in this project. 
+The project ships with package metadata, so you can install it directly into your global environment (or via `pipx`) once the prerequisites above are available:
 
-In the project's root folder, execute the following commands to set up and activate the virtual environment:
+```
+pip install .
+# or
+pipx install .
+```
+
+Installing the package this way exposes the `securify` CLI on your `$PATH`.
+
+### Working from a virtual environment
+
+If you prefer an editable install while developing locally:
 
 ```
 virtualenv --python=/usr/bin/python3.12 venv
 source venv/bin/activate
 ```
 
-Verify that the `python` version is actually `3.12` or higher (any version from 3.12 onwards is supported):
+Verify that the `python` version is actually `3.12` or higher (any version from 3.12 onwards is supported).
 
-```
-python --version
-```
+Then install the dependencies:
 
-Set `LD_LIBRARY_PATH`:
-```
-cd <securify_root>/securify/staticanalysis/libfunctors
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:`pwd`
-```
-
-Finally, install the project's dependencies by running the following commands from the `<securify_root>` folder:
 ```
 pip install --upgrade pip
 pip install -r requirements.txt
 pip install -e .
 ```
 
-Now you're ready to start using the securify framework.
+Ensure that the functor library directory is discoverable:
+```
+export LD_LIBRARY_PATH="$(pwd)/securify/staticanalysis/libfunctors:${LD_LIBRARY_PATH:-}"
+```
+You can also run `source setup_env.sh` to perform the environment setup automatically.
 
-Remember: Before executing the framework's scripts, you'll need to activate the virtual environment with the following command:
-```
-source venv/bin/activate
-```
+Now you're ready to start using the securify framework. Remember to activate the virtual environment (`source .venv/bin/activate`) whenever you open a new shell.
 
 Usage
 ===

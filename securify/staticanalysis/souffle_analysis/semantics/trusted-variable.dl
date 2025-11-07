@@ -26,8 +26,11 @@
         data.graph.node(node).
 
     // This can be optimized by enumerating in-edges first
-    trustedPredecessors(node, SET_ADD(set, [pred])) :-
-        trustedPredecessors(node, set), data.graph.edge(node, [pred]), isTrustedValue(pred).
+    trustedPredecessors(node, SET_ADD(set, predNode)) :-
+        trustedPredecessors(node, set),
+        data.graph.edge(node, predNode),
+        predNode = [pred],
+        isTrustedValue(pred).
 
     isTrustedValue(value) :- isTrustedInstr(value).
 
