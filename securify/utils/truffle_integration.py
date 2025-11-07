@@ -4,9 +4,9 @@ Provides support for analyzing Truffle projects
 """
 
 import os
-import json
 import subprocess
 import tempfile
+import re
 from pathlib import Path
 
 
@@ -107,6 +107,7 @@ class TruffleProject:
         """
         visited = set()
         output_lines = []
+        seen_pragmas = set()
         
         def process_file(file_path):
             if file_path in visited:
@@ -128,9 +129,11 @@ class TruffleProject:
                             process_file(resolved_path)
                             continue
                 
-                # Skip redundant pragma statements after the first file
-                if len(visited) > 1 and stripped.startswith('pragma'):
-                    continue
+                # Skip duplicate pragma statements
+                if stripped.startswith('pragma'):
+                    if stripped in seen_pragmas:
+                        continue
+                    seen_pragmas.add(stripped)
                 
                 output_lines.append(line)
         
@@ -143,8 +146,6 @@ class TruffleProject:
     
     def _extract_import_path(self, import_line):
         """Extract the file path from an import statement"""
-        import re
-        
         # Match: import "path"; or import 'path';
         match = re.search(r'import\s+["\']([^"\']+)["\']', import_line)
         if match:

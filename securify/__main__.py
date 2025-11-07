@@ -340,7 +340,8 @@ def handle_truffle_project(project_path, args, souffle_config):
                 if flattened_contract != str(contract_file):
                     try:
                         os.unlink(flattened_contract)
-                    except:
+                    except (OSError, FileNotFoundError):
+                        # Ignore errors when cleaning up temp files
                         pass
                         
             except Exception as e:
